@@ -43,8 +43,6 @@ const refreshToken = catchAsync(async (req: Request, res: Response, next: NextFu
         httpOnly: true,
         secure: false,
         sameSite: "none",
-        // secure: process.env.NODE_ENV === "production",
-        // sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
         maxAge: 1000 * 60 * 60 * 24 // 24 hour or 1 day
     })
 
