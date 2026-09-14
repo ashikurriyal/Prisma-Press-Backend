@@ -3,7 +3,7 @@ import { catchAsync } from "../../utils/catchAsync";
 import httpStatus from "http-status";
 import { postService } from "./post.service";
 import { sendResponse } from "../../utils/sendResponse";
-import { prisma } from "../../lib/prisma";
+
 
 const createPost = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
 
