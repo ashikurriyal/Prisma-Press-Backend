@@ -1,3 +1,4 @@
+import { CommentStatus } from "../../../generated/prisma/enums"
 import { prisma } from "../../lib/prisma"
 import { ICreatePostPayload, IUpdatePostPayload } from "./post.interface"
 
@@ -28,33 +29,51 @@ const getAllPosts = async () => {
     return posts
 }
 
-const getPostById = async (poastId: string) => {
-    const post = await prisma.post.findUniqueOrThrow({
-        where: {
-            id: poastId
-        }
-    })
+const getPostById = async (postId: string) => {
 
-    const updatedPost = await prisma.post.update({
-        where: {
-            id: poastId
-        },
-        data: {
-            views: {
-                increment: 1
-            }
-        },
-        include: {
-            author: {
-                omit: {
-                    password: true
+    const transactionResult = await prisma.$transaction(
+        async (tx) => {
+            await tx.post.update({
+                where: {
+                    id: postId
+                },
+                data: {
+                    views: {
+                        increment: 1
+                    }
                 }
-            },
-            comments: true
+            });
+            // throw new Error("fake error");
+            const post = await tx.post.findUniqueOrThrow({
+                where: {
+                    id: postId
+                },
+                include: {
+                    author: {
+                        omit: {
+                            password: true
+                        }
+                    },
+                    comments: {
+                        where: {
+                            status: CommentStatus.APPROVED
+                        },
+                        orderBy: {
+                            createdAt: "desc"
+                        }
+                    },
+                    _count: {
+                        select: {
+                            comments: true
+                        }
+                    }
+                }
+            });
+            return post;
         }
-    })
+    );
 
-    return updatedPost
+    return transactionResult;
 }
 
 const updatePost = async (postId: string, payload: IUpdatePostPayload, authorId: string, isAdmin: boolean) => {
