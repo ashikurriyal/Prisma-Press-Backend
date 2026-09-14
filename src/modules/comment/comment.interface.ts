@@ -1,3 +1,5 @@
+//define the typescript interfaces for the request payloads.
+
 import { CommentStatus } from "../../../generated/prisma/enums";
 
 export interface ICreateCommentPayload {

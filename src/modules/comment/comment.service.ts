@@ -1,3 +1,5 @@
+//handles the database logic, ownership validation, and business rules
+
 import { CommentStatus } from "../../../generated/prisma/enums";
 import { prisma } from "../../lib/prisma";
 import { ICreateCommentPayload, IUpdateCommentPayload } from "./comment.interface";
