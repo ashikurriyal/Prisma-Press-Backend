@@ -1,4 +1,4 @@
-import { CommentStatus } from "../../../generated/prisma/enums"
+import { CommentStatus, PostStatus } from "../../../generated/prisma/enums"
 import { prisma } from "../../lib/prisma"
 import { ICreatePostPayload, IUpdatePostPayload } from "./post.interface"
 
@@ -123,8 +123,70 @@ const deletePost = async (postId: string, authorId: string, isAdmin: boolean) =>
 
 }
 
-const getPostsStats = () => {
+const getPostsStats = async () => {
+    const transactionResult = await prisma.$transaction(
+        async (tx) => {
+            const totalPosts = await tx.post.count();
 
+            const totalPublishedPosts = await tx.post.count ({
+                where : {
+                    status : PostStatus.PUBLISHED
+                }
+            })
+            const totalDraftPosts = await tx.post.count ({
+                where : {
+                    status : PostStatus.DRAFT
+                }
+            })
+            const totalArchivedPosts = await tx.post.count ({
+                where : {
+                    status : PostStatus.ARCHIVED
+                }
+            })
+
+            const totalComments = await tx.comment.count();
+
+            const totalApprovedComments = await tx.comment.count({
+                where: {
+                    status : CommentStatus.APPROVED
+                }
+            })
+            const totalRejectedComments = await tx.comment.count({
+                where: {
+                    status : CommentStatus.REJECT
+                }
+            })
+                
+            //not a good option- if 10lakh post view then not working
+            // const allPosts = await tx.post.findMany();
+            // let totalPostViews = 0;
+            // allPosts.forEach((post)=>{
+            //     totalPostViews = totalPostViews + post.views
+            // })
+
+            //using aggregate count the numerical in from db
+            const totalPostViewsAggregate = await tx.post.aggregate({
+                _sum : {
+                    views : true
+                }
+            })
+
+            const totalPostViews = totalPostViewsAggregate._sum.views
+
+            return {
+                totalPosts,
+                totalPublishedPosts,
+                totalDraftPosts,
+                totalArchivedPosts,
+                totalComments,
+                totalApprovedComments,
+                totalRejectedComments,
+                totalPostViews
+            }
+        }
+    )
+
+    return transactionResult
 }
 
 const getMyPosts = async (authorId: string) => {
