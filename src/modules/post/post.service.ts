@@ -13,31 +13,97 @@ const createPost = async (payload: ICreatePostPayload, userId: string) => {
     return result
 }
 
+/**
+ * ============================================================
+ *  PRISMA SEARCHING & FILTERING — PRACTICE NOTES
+ * ============================================================
+ *
+ *  Quick rules:
+ *    field: "x"                                   → EXACT match (same as { equals: "x" })
+ *    field: { contains: "x" }                     → PARTIAL match (x appears anywhere)
+ *    field: { contains: "x", mode: "insensitive" } → partial match, ignores upper/lower case
+ *    AND: [ ... ]                                 → ALL conditions must be true
+ *    OR:  [ ... ]                                 → AT LEAST ONE condition must be true
+ *
+ *  Examples 1–4 are kept below for reference.
+ *  Uncomment ONE `where` at a time to try it (and comment out the active one).
+ * ============================================================
+ */
 const getAllPosts = async () => {
-    const posts = await prisma.post.findMany(
-        {
-            //Filterting
-            // where: {
-            //     AND: [
-            //         {
-            //             title: "My First Post"
-            //         },
-            //         {
-            //             content: "This is the content of my first post."
-            //         }
-            //     ]
-            // },
-            include: {
-                author: {
-                    omit: {
-                        password: true,
-                    }
+    const posts = await prisma.post.findMany({
+
+        // ------------------------------------------------------------
+        // 1) FILTERING — exact match with AND
+        //    Returns posts whose title is EXACTLY "My First Post"
+        //    AND whose content is EXACTLY the given sentence.
+        // ------------------------------------------------------------
+        // where: {
+        //     AND: [
+        //         { title: "My First Post" },
+        //         { content: "This is the content of my first post." },
+        //     ],
+        // },
+
+        // ------------------------------------------------------------
+        // 2) SEARCHING — partial match on ONE field
+        //    Returns posts whose title contains "messi" (any case).
+        // ------------------------------------------------------------
+        // where: {
+        //     title: { contains: "Messi", mode: "insensitive" },
+        // },
+
+        // ------------------------------------------------------------
+        // 3) SEARCHING — partial match on MANY fields with OR
+        //    Returns posts where the title OR the content contains "messi".
+        // ------------------------------------------------------------
+        // where: {
+        //     OR: [
+        //         { title: { contains: "Messi", mode: "insensitive" } },
+        //         { content: { contains: "Messi", mode: "insensitive" } },
+        //     ],
+        // },
+
+        // ------------------------------------------------------------
+        // 4) Partial match on MANY fields with AND
+        //    Returns posts where the title AND the content BOTH contain "messi".
+        // ------------------------------------------------------------
+        // where: {
+        //     AND: [
+        //         { title: { contains: "Messi", mode: "insensitive" } },
+        //         { content: { contains: "Messi", mode: "insensitive" } },
+        //     ],
+        // },
+
+        // ------------------------------------------------------------
+        // 5) SEARCHING + FILTERING together  ✅ (currently active)
+        //    Search : title OR content contains "mes"
+        //    Filter : AND the title must also contain "messi"
+        // ------------------------------------------------------------
+        where: {
+            AND: [
+                // search part
+                {
+                    OR: [
+                        { title: { contains: "Mes", mode: "insensitive" } },
+                        { content: { contains: "Mes", mode: "insensitive" } },
+                    ],
                 },
-                comments: true,
-            }
-        }
-    );
-    return posts
+
+                // filter part
+                { title: { contains: "Messi", mode: "insensitive" } },
+                // { content: { contains: "Messi", mode: "insensitive" } },
+            ],
+        },
+
+        include: {
+            author: {
+                omit: { password: true },
+            },
+            comments: true,
+        },
+    });
+
+    return posts;
 }
 
 const getPostById = async (postId: string) => {
