@@ -1,4 +1,5 @@
 import { CommentStatus, PostStatus } from "../../../generated/prisma/enums"
+import { PostWhereInput } from "../../../generated/prisma/models"
 import { prisma } from "../../lib/prisma"
 import { ICreatePostPayload, IPostQuery, IUpdatePostPayload } from "./post.interface"
 
@@ -20,6 +21,69 @@ const getAllPosts = async (query: IPostQuery) => {
     const skip = (page - 1) * limit;
     const sortBy = query.sortBy ? query.sortBy : "createdAt";
     const sortOrder = query.sortOrder ? query.sortOrder : "desc"
+    const tags = query.tags ? JSON.parse(query.tags as string) : null;
+    const tagsArray = Array.isArray(tags) ? tags : []
+
+    console.log(tagsArray, "tagsArray")
+
+
+    const andConditions: PostWhereInput[] = [];
+
+    if (query.searchTerm) {
+        andConditions.push({
+            OR: [
+                {
+                    title: {
+                        contains: query.searchTerm,
+                        mode: 'insensitive'
+                    },
+
+                },
+                {
+                    content: {
+                        contains: query.searchTerm,
+                        mode: 'insensitive'
+                    },
+                }
+            ]
+        })
+    }
+
+    if (query.title) {
+        andConditions.push({
+            title: query.title
+        })
+    }
+    if (query.content) {
+        andConditions.push({
+            content: query.content
+        })
+    }
+    if (query.authorId) {
+        andConditions.push({
+            authorId: query.authorId
+        })
+    }
+    if (query.isFeatured !== undefined) {
+        andConditions.push({
+            isFeatured: String(query.isFeatured) === "true"
+        })
+    }
+
+    if (query.tags) {
+        andConditions.push({
+            tags: {
+                hasSome: tagsArray
+            }
+        })
+    }
+
+    if(query.status){
+        andConditions.push({
+            status: query.status
+        })
+    }
+
     const posts = await prisma.post.findMany({
 
         /**
@@ -126,34 +190,40 @@ const getAllPosts = async (query: IPostQuery) => {
         // skip: 9, // page 4
 
 
+        //dynamic searching, filtering
         where: {
-            AND: [
-                //searchTerm
-                query.searchTerm ? {
-                    OR: [
-                        {
-                            title: {
-                                contains: query.searchTerm,
-                                mode: 'insensitive'
-                            },
+            // AND: [
+            //     //searchTerm
+            //     query.searchTerm ? {
+            //         OR: [
+            //             {
+            //                 title: {
+            //                     contains: query.searchTerm,
+            //                     mode: 'insensitive'
+            //                 },
 
-                        },
-                        {
-                            content: {
-                                contains: query.searchTerm,
-                                mode: 'insensitive'
-                            },
-                        }
-                    ]
-                } : {},
+            //             },
+            //             {
+            //                 content: {
+            //                     contains: query.searchTerm,
+            //                     mode: 'insensitive'
+            //                 },
+            //             }
+            //         ]
+            //     } : {},
 
-                //title filtering
-                query.title ? { title: query.title } : {},
-                //content filtering
-                query.content ? { content: query.content } : {}
-            ]
+            //     //title filtering
+            //     query.title ? { title: query.title } : {},
+            //     //content filtering
+            //     query.content ? { content: query.content } : {}
+            // ]
+
+            AND :andConditions
         },
+        
 
+
+        //dynamic pagination and sorting
         take: limit,
         skip: skip,
         orderBy: {
