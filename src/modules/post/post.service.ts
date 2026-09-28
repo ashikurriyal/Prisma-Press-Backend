@@ -1,6 +1,7 @@
 import { CommentStatus, PostStatus } from "../../../generated/prisma/enums"
+import { PostWhereInput } from "../../../generated/prisma/models"
 import { prisma } from "../../lib/prisma"
-import { ICreatePostPayload, IUpdatePostPayload } from "./post.interface"
+import { ICreatePostPayload, IPostQuery, IUpdatePostPayload } from "./post.interface"
 
 const createPost = async (payload: ICreatePostPayload, userId: string) => {
     const result = await prisma.post.create({
@@ -13,20 +14,228 @@ const createPost = async (payload: ICreatePostPayload, userId: string) => {
     return result
 }
 
-const getAllPosts = async () => {
-    const posts = await prisma.post.findMany(
-        {
-            include: {
-                author: {
-                    omit: {
-                        password: true,
-                    }
+
+const getAllPosts = async (query: IPostQuery) => {
+    const limit = query.limit ? Number(query.limit) : 10;
+    const page = query.page ? Number(query.page) : 1;
+    const skip = (page - 1) * limit;
+    const sortBy = query.sortBy ? query.sortBy : "createdAt";
+    const sortOrder = query.sortOrder ? query.sortOrder : "desc"
+    const tags = query.tags ? JSON.parse(query.tags as string) : null;
+    const tagsArray = Array.isArray(tags) ? tags : []
+
+
+    const andConditions: PostWhereInput[] = [];
+
+    if (query.searchTerm) {
+        andConditions.push({
+            OR: [
+                {
+                    title: {
+                        contains: query.searchTerm,
+                        mode: 'insensitive'
+                    },
+
                 },
-                comments: true,
+                {
+                    content: {
+                        contains: query.searchTerm,
+                        mode: 'insensitive'
+                    },
+                }
+            ]
+        })
+    }
+
+    if (query.title) {
+        andConditions.push({
+            title: query.title
+        })
+    }
+    if (query.content) {
+        andConditions.push({
+            content: query.content
+        })
+    }
+    if (query.authorId) {
+        andConditions.push({
+            authorId: query.authorId
+        })
+    }
+    if (query.isFeatured !== undefined) {
+        andConditions.push({
+            isFeatured: String(query.isFeatured) === "true"
+        })
+    }
+
+    if (query.tags) {
+        andConditions.push({
+            tags: {
+                hasSome: tagsArray
             }
-        }
-    );
-    return posts
+        })
+    }
+
+    if(query.status){
+        andConditions.push({
+            status: query.status
+        })
+    }
+
+    const posts = await prisma.post.findMany({
+
+        /**
+ * ============================================================
+ *  PRISMA SEARCHING & FILTERING — PRACTICE NOTES
+ * ============================================================
+ *
+ *  Quick rules:
+ *    field: "x"                                   → EXACT match (same as { equals: "x" })
+ *    field: { contains: "x" }                     → PARTIAL match (x appears anywhere)
+ *    field: { contains: "x", mode: "insensitive" } → partial match, ignores upper/lower case
+ *    AND: [ ... ]                                 → ALL conditions must be true
+ *    OR:  [ ... ]                                 → AT LEAST ONE condition must be true
+ *
+ *  Examples 1–4 are kept below for reference.
+ *  Uncomment ONE `where` at a time to try it (and comment out the active one).
+ * ============================================================
+ */
+
+        // ------------------------------------------------------------
+        // 1) FILTERING — exact match with AND
+        //    Returns posts whose title is EXACTLY "My First Post"
+        //    AND whose content is EXACTLY the given sentence.
+        // ------------------------------------------------------------
+        // where: {
+        //     AND: [
+        //         { title: "My First Post" },
+        //         { content: "This is the content of my first post." },
+        //     ],
+        // },
+
+        // ------------------------------------------------------------
+        // 2) SEARCHING — partial match on ONE field
+        //    Returns posts whose title contains "messi" (any case).
+        // ------------------------------------------------------------
+        // where: {
+        //     title: { contains: "Messi", mode: "insensitive" },
+        // },
+
+        // ------------------------------------------------------------
+        // 3) SEARCHING — partial match on MANY fields with OR
+        //    Returns posts where the title OR the content contains "messi".
+        // ------------------------------------------------------------
+        // where: {
+        //     OR: [
+        //         { title: { contains: "Messi", mode: "insensitive" } },
+        //         { content: { contains: "Messi", mode: "insensitive" } },
+        //     ],
+        // },
+
+        // ------------------------------------------------------------
+        // 4) Partial match on MANY fields with AND
+        //    Returns posts where the title AND the content BOTH contain "messi".
+        // ------------------------------------------------------------
+        // where: {
+        //     AND: [
+        //         { title: { contains: "Messi", mode: "insensitive" } },
+        //         { content: { contains: "Messi", mode: "insensitive" } },
+        //     ],
+        // },
+
+        // ------------------------------------------------------------
+        // 5) SEARCHING + FILTERING together  ✅ (currently active)
+        //    Search : title OR content contains "mes"
+        //    Filter : AND the title must also contain "messi"
+        // ------------------------------------------------------------
+        // where: {
+        //     AND: [
+        //         // search part
+        //         {
+        //             OR: [
+        //                 { title: { contains: "Mes", mode: "insensitive" } },
+        //                 { content: { contains: "Mes", mode: "insensitive" } },
+        //             ],
+        //         },
+
+        //         // filter part
+        //         { title: { contains: "Messi", mode: "insensitive" } },
+        //         // { content: { contains: "Messi", mode: "insensitive" } },
+        //     ],
+        // },
+
+        // ------------------------------------------------------------
+        // 6) PAGINATION — take & skip  ✅ (currently active)
+        //
+        //    take  → how many posts to return   (a.k.a. "limit" / page size)
+        //    skip  → how many posts to jump over before starting
+        //
+        //    Formula:  skip = (page - 1) * limit
+        //
+        //    Example with limit = 3:
+        //      page 1 → skip = (1 - 1) * 3 = 0  → posts 1–3
+        //      page 2 → skip = (2 - 1) * 3 = 3  → posts 4–6
+        //      page 3 → skip = (3 - 1) * 3 = 6  → posts 7–9
+        //      page 4 → skip = (4 - 1) * 3 = 9  → posts 10–12
+        //
+        //    Example with limit = 10, page = 3:
+        //      skip = (3 - 1) * 10 = 20 → posts 21–30
+        // ------------------------------------------------------------
+        // take: 3,
+        // skip: 3, // page 2
+        // skip: 0, // page 1
+        // skip: 6, // page 3
+        // skip: 9, // page 4
+
+
+        //dynamic searching, filtering
+        where: {
+            // AND: [
+            //     //searchTerm
+            //     query.searchTerm ? {
+            //         OR: [
+            //             {
+            //                 title: {
+            //                     contains: query.searchTerm,
+            //                     mode: 'insensitive'
+            //                 },
+
+            //             },
+            //             {
+            //                 content: {
+            //                     contains: query.searchTerm,
+            //                     mode: 'insensitive'
+            //                 },
+            //             }
+            //         ]
+            //     } : {},
+
+            //     //title filtering
+            //     query.title ? { title: query.title } : {},
+            //     //content filtering
+            //     query.content ? { content: query.content } : {}
+            // ]
+
+            AND :andConditions
+        },
+        
+
+
+        //dynamic pagination and sorting
+        take: limit,
+        skip: skip,
+        orderBy: {
+            [sortBy]: sortOrder
+        },
+        include: {
+            author: {
+                omit: { password: true },
+            },
+            comments: true,
+        },
+    });
+
+    return posts;
 }
 
 const getPostById = async (postId: string) => {
@@ -237,7 +446,7 @@ const getPostsStats = async () => {
                 totalComments,
                 totalApprovedComments,
                 totalRejectedComments,
-                totalPostViews : totalPostViewsAggregate._sum.views
+                totalPostViews: totalPostViewsAggregate._sum.views
             }
         }
     )
