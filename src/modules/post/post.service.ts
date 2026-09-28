@@ -79,21 +79,44 @@ const getAllPosts = async () => {
         //    Search : title OR content contains "mes"
         //    Filter : AND the title must also contain "messi"
         // ------------------------------------------------------------
-        where: {
-            AND: [
-                // search part
-                {
-                    OR: [
-                        { title: { contains: "Mes", mode: "insensitive" } },
-                        { content: { contains: "Mes", mode: "insensitive" } },
-                    ],
-                },
+        // where: {
+        //     AND: [
+        //         // search part
+        //         {
+        //             OR: [
+        //                 { title: { contains: "Mes", mode: "insensitive" } },
+        //                 { content: { contains: "Mes", mode: "insensitive" } },
+        //             ],
+        //         },
 
-                // filter part
-                { title: { contains: "Messi", mode: "insensitive" } },
-                // { content: { contains: "Messi", mode: "insensitive" } },
-            ],
-        },
+        //         // filter part
+        //         { title: { contains: "Messi", mode: "insensitive" } },
+        //         // { content: { contains: "Messi", mode: "insensitive" } },
+        //     ],
+        // },
+
+        // ------------------------------------------------------------
+        // 6) PAGINATION — take & skip  ✅ (currently active)
+        //
+        //    take  → how many posts to return   (a.k.a. "limit" / page size)
+        //    skip  → how many posts to jump over before starting
+        //
+        //    Formula:  skip = (page - 1) * limit
+        //
+        //    Example with limit = 3:
+        //      page 1 → skip = (1 - 1) * 3 = 0  → posts 1–3
+        //      page 2 → skip = (2 - 1) * 3 = 3  → posts 4–6
+        //      page 3 → skip = (3 - 1) * 3 = 6  → posts 7–9
+        //      page 4 → skip = (4 - 1) * 3 = 9  → posts 10–12
+        //
+        //    Example with limit = 10, page = 3:
+        //      skip = (3 - 1) * 10 = 20 → posts 21–30
+        // ------------------------------------------------------------
+        take: 3,
+        skip: 3, // page 2
+        // skip: 0, // page 1
+        // skip: 6, // page 3
+        // skip: 9, // page 4
 
         include: {
             author: {
