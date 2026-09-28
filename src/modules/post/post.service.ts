@@ -16,6 +16,17 @@ const createPost = async (payload: ICreatePostPayload, userId: string) => {
 const getAllPosts = async () => {
     const posts = await prisma.post.findMany(
         {
+            //Filterting
+            // where: {
+            //     AND: [
+            //         {
+            //             title: "My First Post"
+            //         },
+            //         {
+            //             content: "This is the content of my first post."
+            //         }
+            //     ]
+            // },
             include: {
                 author: {
                     omit: {
@@ -237,7 +248,7 @@ const getPostsStats = async () => {
                 totalComments,
                 totalApprovedComments,
                 totalRejectedComments,
-                totalPostViews : totalPostViewsAggregate._sum.views
+                totalPostViews: totalPostViewsAggregate._sum.views
             }
         }
     )
