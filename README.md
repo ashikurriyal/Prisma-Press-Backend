@@ -3,7 +3,7 @@
 A blogging platform REST API built with **Express 5**, **Prisma 7**, **PostgreSQL** and **TypeScript**.
 Users can register, write posts, comment, and subscribe through **Stripe** to unlock premium posts.
 
-> This is a learning project (Next Level Web Development, Mission 4: Prisma). It covers Prisma
+> This is a learning project. It covers Prisma
 > modelling and relations, searching/filtering/pagination, transactions, JWT authentication with
 > role-based access, and Stripe subscriptions with webhooks.
 
@@ -11,21 +11,33 @@ Users can register, write posts, comment, and subscribe through **Stripe** to un
 
 ## Table of Contents
 
-- [Tech Stack](#tech-stack)
-- [Features](#features)
-- [Project Structure](#project-structure)
-- [Architecture](#architecture)
-- [Database Schema](#database-schema)
-- [Getting Started](#getting-started)
-- [Environment Variables](#environment-variables)
-- [Scripts](#scripts)
-- [Authentication & Roles](#authentication--roles)
-- [API Reference](#api-reference)
-- [Searching, Filtering & Pagination](#searching-filtering--pagination)
-- [Stripe Subscription Flow](#stripe-subscription-flow)
-- [Response Format](#response-format)
-- [Testing with Postman](#testing-with-postman)
-- [What I Learned](#what-i-learned)
+- [Prisma Press Backend](#prisma-press-backend)
+  - [Table of Contents](#table-of-contents)
+  - [Tech Stack](#tech-stack)
+  - [Features](#features)
+  - [Project Structure](#project-structure)
+  - [Architecture](#architecture)
+  - [Database Schema](#database-schema)
+  - [Getting Started](#getting-started)
+    - [Prerequisites](#prerequisites)
+    - [Installation](#installation)
+    - [Useful Prisma commands](#useful-prisma-commands)
+  - [Environment Variables](#environment-variables)
+  - [Scripts](#scripts)
+  - [Authentication \& Roles](#authentication--roles)
+  - [API Reference](#api-reference)
+    - [Users: `/api/users`](#users-apiusers)
+    - [Auth: `/api/auth`](#auth-apiauth)
+    - [Posts: `/api/posts`](#posts-apiposts)
+    - [Comments: `/api/comments`](#comments-apicomments)
+    - [Subscription: `/api/subscription`](#subscription-apisubscription)
+    - [Premium: `/api/premium`](#premium-apipremium)
+  - [Searching, Filtering \& Pagination](#searching-filtering--pagination)
+  - [Stripe Subscription Flow](#stripe-subscription-flow)
+    - [Testing webhooks locally](#testing-webhooks-locally)
+  - [Response Format](#response-format)
+  - [Testing with Postman](#testing-with-postman)
+  - [What I Learned](#what-i-learned)
 
 ---
 
