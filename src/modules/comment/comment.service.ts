@@ -19,20 +19,20 @@ const getCommentsByAuthor = async (authorId: string) => {
     return comments;
 }
 
-const getCommentByCommentId = async (commentId: string) => {
-    const comment = await prisma.comment.findUniqueOrThrow({
+const getCommentByPostId = async (postId: string) => {
+    const comment = await prisma.comment.findMany({
         where: {
-            id: commentId
+            id: postId
         },
-        include: {
-            post: {
-                select: {
-                    id: true,
-                    title: true,
-                    views: true
-                }
-            }
-        }
+        // include: {
+        //     post: {
+        //         select: {
+        //             id: true,
+        //             title: true,
+        //             views: true
+        //         }
+        //     }
+        // }
     });
     return comment;
 }
@@ -120,7 +120,7 @@ const moderateComment = async (commentId: string, status: CommentStatus) => {
 
 export const commentService = {
     getCommentsByAuthor,
-    getCommentByCommentId,
+    getCommentByPostId,
     createComment,
     updateComment,
     deleteComment,

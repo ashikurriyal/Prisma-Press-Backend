@@ -7,7 +7,7 @@ const router = Router();
 
 // Public routes
 router.get("/author/:authorId", commentController.getCommentsByAuthor);
-router.get("/:commentId", commentController.getCommentByCommentId);
+router.get("/:postId", commentController.getCommentByPostId);
 
 // USER or ADMIN routes
 router.post("/", auth(Role.USER, Role.ADMIN), commentController.createComment);

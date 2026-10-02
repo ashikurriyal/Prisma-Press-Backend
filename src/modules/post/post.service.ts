@@ -4,6 +4,19 @@ import { prisma } from "../../lib/prisma"
 import { ICreatePostPayload, IPostQuery, IUpdatePostPayload } from "./post.interface"
 
 const createPost = async (payload: ICreatePostPayload, userId: string) => {
+    const user = await prisma.user.findFirstOrThrow({
+        where: {
+            id: userId
+        },
+        include: {
+            subscription: true
+        }
+    })
+
+    if (payload.isPremium && user.subscription?.status !== "ACTIVE") {
+        throw new Error("You are not a premium user. so you can not create premium content");
+    }
+
     const result = await prisma.post.create({
         data: {
             ...payload,
@@ -76,11 +89,15 @@ const getAllPosts = async (query: IPostQuery) => {
         })
     }
 
-    if(query.status){
+    if (query.status) {
         andConditions.push({
             status: query.status
         })
     }
+
+    andConditions.push({
+        isPremium: false
+    })
 
     const posts = await prisma.post.findMany({
 
@@ -216,9 +233,9 @@ const getAllPosts = async (query: IPostQuery) => {
             //     query.content ? { content: query.content } : {}
             // ]
 
-            AND :andConditions
+            AND: andConditions
         },
-        
+
 
 
         //dynamic pagination and sorting
@@ -235,7 +252,21 @@ const getAllPosts = async (query: IPostQuery) => {
         },
     });
 
-    return posts;
+    const totalPostCount = await prisma.post.count({
+        where: {
+            AND: andConditions
+        }
+    })
+
+    return {
+        data: posts,
+        meta: {
+            page: page,
+            limit: limit,
+            total: totalPostCount,
+            totalPages: Math.ceil(totalPostCount / limit)
+        }
+    };
 }
 
 const getPostById = async (postId: string) => {
@@ -244,7 +275,7 @@ const getPostById = async (postId: string) => {
         async (tx) => {
             await tx.post.update({
                 where: {
-                    id: postId
+                    id: postId,
                 },
                 data: {
                     views: {
@@ -255,7 +286,8 @@ const getPostById = async (postId: string) => {
             // throw new Error("fake error");
             const post = await tx.post.findUniqueOrThrow({
                 where: {
-                    id: postId
+                    id: postId,
+                    isPremium: false
                 },
                 include: {
                     author: {
@@ -288,7 +320,8 @@ const getPostById = async (postId: string) => {
 const updatePost = async (postId: string, payload: IUpdatePostPayload, authorId: string, isAdmin: boolean) => {
     const post = await prisma.post.findUniqueOrThrow({
         where: {
-            id: postId
+            id: postId,
+            isPremium: false
         }
     })
 
@@ -317,7 +350,8 @@ const updatePost = async (postId: string, payload: IUpdatePostPayload, authorId:
 const deletePost = async (postId: string, authorId: string, isAdmin: boolean) => {
     const post = await prisma.post.findUniqueOrThrow({
         where: {
-            id: postId
+            id: postId,
+            isPremium: false
         }
     })
     if (!isAdmin && post.authorId !== authorId) {
