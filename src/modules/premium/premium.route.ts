@@ -1,10 +1,10 @@
 import { NextFunction, Request, Response, Router } from "express";
-import { auth } from "../../middlewares/auth";
-import { Role, SubscriptionStatus } from "../../../generated/prisma/enums";
-import { premiumController } from "./premium.controller";
-import { catchAsync } from "../../utils/catchAsync";
-import { prisma } from "../../lib/prisma";
-import { subscriptionGuard } from "../../middlewares/premiumGuards";
+import { auth } from "../../middlewares/auth.js";
+import { Role, SubscriptionStatus } from "../../../generated/prisma/enums.js";
+import { premiumController } from "./premium.controller.js";
+import { catchAsync } from "../../utils/catchAsync.js";
+import { prisma } from "../../lib/prisma.js";
+import { subscriptionGuard } from "../../middlewares/premiumGuards.js";
 
 const router = Router()
 

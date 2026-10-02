@@ -1,13 +1,16 @@
+import httpStatus from "http-status";
+import { AppError } from "../../utils/AppError.js";
 //handles the database logic, ownership validation, and business rules
 
-import { CommentStatus } from "../../../generated/prisma/enums";
-import { prisma } from "../../lib/prisma";
-import { ICreateCommentPayload, IUpdateCommentPayload } from "./comment.interface";
+import { CommentStatus } from "../../../generated/prisma/enums.js";
+import { prisma } from "../../lib/prisma.js";
+import { ICreateCommentPayload, IUpdateCommentPayload } from "./comment.interface.js";
 
 const getCommentsByAuthor = async (authorId: string) => {
     const comments = await prisma.comment.findMany({
         where: {
-            authorId
+            authorId,
+            status: CommentStatus.APPROVED
         },
         orderBy: {
             createdAt: "desc"
@@ -22,7 +25,11 @@ const getCommentsByAuthor = async (authorId: string) => {
 const getCommentByPostId = async (postId: string) => {
     const comment = await prisma.comment.findMany({
         where: {
-            id: postId
+            postId,
+            status: CommentStatus.APPROVED
+        },
+        orderBy: {
+            createdAt: "desc"
         },
         // include: {
         //     post: {
@@ -65,14 +72,17 @@ const updateComment = async (commentId: string, payload: IUpdateCommentPayload, 
 
     // Enforce ownership check
     if (comment.authorId !== authorId) {
-        throw new Error("You are not the owner of this comment!");
+        throw new AppError(httpStatus.FORBIDDEN, "You are not the owner of this comment!");
     }
 
     const result = await prisma.comment.update({
         where: {
             id: commentId
         },
-        data: payload
+        //only content can be edited here, status is changed through the moderate route
+        data: {
+            content: payload.content
+        }
     });
     return result;
 }
@@ -86,7 +96,7 @@ const deleteComment = async (commentId: string, authorId: string) => {
 
     // Enforce ownership check
     if (comment.authorId !== authorId) {
-        throw new Error("You are not the owner of this comment!");
+        throw new AppError(httpStatus.FORBIDDEN, "You are not the owner of this comment!");
     }
 
     await prisma.comment.delete({
@@ -104,7 +114,7 @@ const moderateComment = async (commentId: string, status: CommentStatus) => {
     });
 
     if (comment.status === status) {
-        throw new Error(`Comment is already marked as ${status}`);
+        throw new AppError(httpStatus.BAD_REQUEST, `Comment is already marked as ${status}`);
     }
 
     const result = await prisma.comment.update({

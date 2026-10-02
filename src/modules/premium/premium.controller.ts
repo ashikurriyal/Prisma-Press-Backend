@@ -1,8 +1,9 @@
+import { AppError } from "../../utils/AppError.js";
 import { NextFunction, Request, Response } from "express";
-import { catchAsync } from "../../utils/catchAsync";
-import { sendResponse } from "../../utils/sendResponse";
+import { catchAsync } from "../../utils/catchAsync.js";
+import { sendResponse } from "../../utils/sendResponse.js";
 import httpStatus from "http-status";
-import { premiumServices } from "./premium.service";
+import { premiumServices } from "./premium.service.js";
 
 const getPremiumContent = catchAsync(
     async (req: Request, res: Response, next: NextFunction) => {
@@ -26,7 +27,7 @@ const updatePremiumPost = catchAsync(
 
         const postId = req.params.postId;
         if (!postId) {
-            throw new Error("Post Id Required in Params")
+            throw new AppError(httpStatus.BAD_REQUEST, "Post Id Required in Params")
         }
         const payload = req.body;
         const result = await premiumServices.updatePremiumPost(postId as string, payload, authorId as string, isAdmin)
@@ -47,7 +48,7 @@ const deletePremiumPost = catchAsync(
 
         const postId = req.params.postId;
         if (!postId) {
-            throw new Error("Post Id Required in Params")
+            throw new AppError(httpStatus.BAD_REQUEST, "Post Id Required in Params")
         }
         await premiumServices.deletePremiumPost(postId as string, authorId as string, isAdmin)
 

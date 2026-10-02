@@ -1,8 +1,9 @@
+import { AppError } from "../../utils/AppError.js";
 import { NextFunction, Request, Response } from "express";
-import { catchAsync } from "../../utils/catchAsync";
+import { catchAsync } from "../../utils/catchAsync.js";
 import httpStatus from "http-status";
-import { postService } from "./post.service";
-import { sendResponse } from "../../utils/sendResponse";
+import { postService } from "./post.service.js";
+import { sendResponse } from "../../utils/sendResponse.js";
 
 
 const createPost = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
@@ -21,7 +22,6 @@ const createPost = catchAsync(async (req: Request, res: Response, next: NextFunc
 const getAllPosts = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
 
     const query = req.query;
-    console.log(query)
     const result = await postService.getAllPosts(query);
 
 
@@ -37,7 +37,7 @@ const getPostById = catchAsync(async (req: Request, res: Response, next: NextFun
     const postId = req.params.postId;
 
     if (!postId) {
-        throw new Error("Post Id Required in Params")
+        throw new AppError(httpStatus.BAD_REQUEST, "Post Id Required in Params")
     }
 
     const result = await postService.getPostById(postId as string);
@@ -55,7 +55,7 @@ const updatePost = catchAsync(async (req: Request, res: Response, next: NextFunc
 
     const postId = req.params.postId;
     if (!postId) {
-        throw new Error("Post Id Required in Params")
+        throw new AppError(httpStatus.BAD_REQUEST, "Post Id Required in Params")
     }
     const payload = req.body;
     const result = await postService.updatePost(postId as string, payload, authorId as string, isAdmin)
@@ -73,7 +73,7 @@ const deletePost = catchAsync(async (req: Request, res: Response, next: NextFunc
 
     const postId = req.params.postId;
     if (!postId) {
-        throw new Error("Post Id Required in Params")
+        throw new AppError(httpStatus.BAD_REQUEST, "Post Id Required in Params")
     }
     await postService.deletePost(postId as string, authorId as string, isAdmin)
 

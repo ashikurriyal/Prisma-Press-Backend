@@ -1,6 +1,11 @@
-import { PostWhereInput } from "../../../generated/prisma/models";
-import { prisma } from "../../lib/prisma"
-import { IPostQuery, IUpdatePostPayload } from "../post/post.interface";
+import httpStatus from "http-status";
+import { AppError } from "../../utils/AppError.js";
+import { PostWhereInput } from "../../../generated/prisma/models.js";
+import { prisma } from "../../lib/prisma.js"
+import { IPostQuery, IUpdatePostPayload } from "../post/post.interface.js";
+import { pick } from "../../utils/pick.js";
+import { UPDATE_POST_FIELDS } from "../post/post.service.js";
+import { CommentStatus, PostStatus } from "../../../generated/prisma/enums.js";
 
 const getPremiumContent = async (query: IPostQuery) => {
 
@@ -64,14 +69,9 @@ const getPremiumContent = async (query: IPostQuery) => {
         })
     }
 
-    if (query.status) {
-        andConditions.push({
-            status: query.status
-        })
-    }
-
     andConditions.push({
-        isPremium: true
+        isPremium: true,
+        status: PostStatus.PUBLISHED
     })
     const posts = await prisma.post.findMany({
         where: {
@@ -86,7 +86,9 @@ const getPremiumContent = async (query: IPostQuery) => {
             author: {
                 omit: { password: true },
             },
-            comments: true,
+            comments: {
+                where: { status: CommentStatus.APPROVED }
+            },
         },
     })
     const totalPostCount = await prisma.post.count({
@@ -114,14 +116,14 @@ const updatePremiumPost = async (postId: string, payload: IUpdatePostPayload, au
     })
 
     if (!isAdmin && post.authorId !== authorId) {
-        throw new Error("You are not the owner of this premium post!")
+        throw new AppError(httpStatus.FORBIDDEN, "You are not the owner of this premium post!")
     }
 
     const result = await prisma.post.update({
         where: {
             id: postId
         },
-        data: payload,
+        data: pick(payload as any, UPDATE_POST_FIELDS) as IUpdatePostPayload,
         include: {
             author: {
                 omit: {
@@ -143,7 +145,7 @@ const deletePremiumPost = async (postId: string, authorId: string, isAdmin: bool
     })
 
     if (!isAdmin && post.authorId !== authorId) {
-        throw new Error("You are not the owner of this premium post!")
+        throw new AppError(httpStatus.FORBIDDEN, "You are not the owner of this premium post!")
     }
 
     await prisma.post.delete({

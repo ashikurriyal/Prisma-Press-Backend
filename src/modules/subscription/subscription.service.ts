@@ -1,8 +1,10 @@
-import config from "../../config"
-import { prisma } from "../../lib/prisma"
-import { stripe } from "../../lib/stripe"
-import { getPeriodEnd, handleChangeSubscription, handleCheckoutCompleted } from "./subscription.utils"
-import { SubscriptionStatus } from "../../../generated/prisma/enums"
+import httpStatus from "http-status";
+import { AppError } from "../../utils/AppError.js";
+import config from "../../config/index.js"
+import { prisma } from "../../lib/prisma.js"
+import { stripe } from "../../lib/stripe.js"
+import { getPeriodEnd, handleChangeSubscription, handleCheckoutCompleted } from "./subscription.utils.js"
+import { SubscriptionStatus } from "../../../generated/prisma/enums.js"
 
 const createCheckoutSession = async (userId: string) => {
     const transactionResult = await prisma.$transaction(async (tx) => {
@@ -38,8 +40,8 @@ const createCheckoutSession = async (userId: string) => {
             mode: "subscription",
             customer: stripeCustomerId,
             payment_method_types: ["card"],
-            success_url: `${config.app_url}/premium?success=true`,
-            cancel_url: `${config.app_url}/premium?success=false`,
+            success_url: `${config.client_url}/premium?success=true`,
+            cancel_url: `${config.client_url}/premium?success=false`,
             metadata: { userId: user.id }
         })
 
@@ -119,13 +121,13 @@ const cancelSubscription = async (userId: string) => {
     })
 
     if (!subscription) {
-        throw new Error("You don't have any subscription to cancel")
+        throw new AppError(httpStatus.NOT_FOUND, "You don't have any subscription to cancel")
     }
     if (subscription.status !== SubscriptionStatus.ACTIVE) {
-        throw new Error("Your subscription is not active")
+        throw new AppError(httpStatus.BAD_REQUEST, "Your subscription is not active")
     }
     if (subscription.cancelAtPeriodEnd) {
-        throw new Error("Your subscription is already scheduled to cancel")
+        throw new AppError(httpStatus.BAD_REQUEST, "Your subscription is already scheduled to cancel")
     }
 
     //cancel at the end of billing period, so user keeps access for the time already paid

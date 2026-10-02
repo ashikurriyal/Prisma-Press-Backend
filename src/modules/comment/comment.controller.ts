@@ -1,15 +1,16 @@
+import { AppError } from "../../utils/AppError.js";
 //connects the incoming HTTP requests to the service layer and returns formatted responses using your sendResponse and catchAsync utilities.
 
 import { NextFunction, Request, Response } from "express";
-import { catchAsync } from "../../utils/catchAsync";
+import { catchAsync } from "../../utils/catchAsync.js";
 import httpStatus from "http-status";
-import { commentService } from "./comment.service";
-import { sendResponse } from "../../utils/sendResponse";
+import { commentService } from "./comment.service.js";
+import { sendResponse } from "../../utils/sendResponse.js";
 
 const getCommentsByAuthor = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
     const authorId = req.params.authorId;
     if (!authorId) {
-        throw new Error("Author Id Required in Params");
+        throw new AppError(httpStatus.BAD_REQUEST, "Author Id Required in Params");
     }
 
     const result = await commentService.getCommentsByAuthor(authorId as string);
@@ -25,7 +26,7 @@ const getCommentsByAuthor = catchAsync(async (req: Request, res: Response, next:
 const getCommentByPostId = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
     const postId = req.params.postId;
     if (!postId) {
-        throw new Error("Comment Id Required in Params");
+        throw new AppError(httpStatus.BAD_REQUEST, "Post Id Required in Params");
     }
 
     const result = await commentService.getCommentByPostId(postId as string);
@@ -33,7 +34,7 @@ const getCommentByPostId = catchAsync(async (req: Request, res: Response, next: 
     sendResponse(res, {
         success: true,
         statusCode: httpStatus.OK,
-        message: "Comment retrieved successfully",
+        message: "Comments retrieved successfully",
         data: result
     });
 });
@@ -58,7 +59,7 @@ const updateComment = catchAsync(async (req: Request, res: Response, next: NextF
     const payload = req.body;
 
     if (!commentId) {
-        throw new Error("Comment Id Required in Params");
+        throw new AppError(httpStatus.BAD_REQUEST, "Comment Id Required in Params");
     }
 
     const result = await commentService.updateComment(commentId as string, payload, authorId as string);
@@ -76,7 +77,7 @@ const deleteComment = catchAsync(async (req: Request, res: Response, next: NextF
     const commentId = req.params.commentId;
 
     if (!commentId) {
-        throw new Error("Comment Id Required in Params");
+        throw new AppError(httpStatus.BAD_REQUEST, "Comment Id Required in Params");
     }
 
     await commentService.deleteComment(commentId as string, authorId as string);
@@ -94,10 +95,10 @@ const moderateComment = catchAsync(async (req: Request, res: Response, next: Nex
     const { status } = req.body;
 
     if (!commentId) {
-        throw new Error("Comment Id Required in Params");
+        throw new AppError(httpStatus.BAD_REQUEST, "Comment Id Required in Params");
     }
     if (!status) {
-        throw new Error("Status is required in request body");
+        throw new AppError(httpStatus.BAD_REQUEST, "Status is required in request body");
     }
 
     const result = await commentService.moderateComment(commentId as string, status);

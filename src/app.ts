@@ -1,20 +1,20 @@
 import express, { Application, NextFunction, Request, Response } from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import config from "./config";
-import { userRoutes } from "./modules/user/user.route";
-import { authRoutes } from "./modules/auth/auth.routes";
-import { postRoutes } from "./modules/post/post.route";
-import { commentRoutes } from "./modules/comment/comment.route";
-import { notFound } from "./middlewares/notFound";
-import { globalErrorHandler } from "./middlewares/globalErrorHandler";
-import { subscriptionRoutes } from "./modules/subscription/subscription.route";
-import { premiumRoutes } from "./modules/premium/premium.route";
+import config from "./config/index.js";
+import { userRoutes } from "./modules/user/user.route.js";
+import { authRoutes } from "./modules/auth/auth.routes.js";
+import { postRoutes } from "./modules/post/post.route.js";
+import { commentRoutes } from "./modules/comment/comment.route.js";
+import { notFound } from "./middlewares/notFound.js";
+import { globalErrorHandler } from "./middlewares/globalErrorHandler.js";
+import { subscriptionRoutes } from "./modules/subscription/subscription.route.js";
+import { premiumRoutes } from "./modules/premium/premium.route.js";
 
 
 const app: Application = express();
 app.use(cors({
-    origin: config.app_url,
+    origin: config.client_url,
     credentials: true,
 }))
 

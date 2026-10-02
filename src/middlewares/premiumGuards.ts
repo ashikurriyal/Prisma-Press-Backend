@@ -1,7 +1,9 @@
 import { NextFunction, Request, Response } from "express";
-import { catchAsync } from "../utils/catchAsync";
-import { prisma } from "../lib/prisma";
-import { SubscriptionStatus } from "../../generated/prisma/enums";
+import { catchAsync } from "../utils/catchAsync.js";
+import { prisma } from "../lib/prisma.js";
+import { SubscriptionStatus } from "../../generated/prisma/enums.js";
+import { AppError } from "../utils/AppError.js";
+import httpStatus from "http-status";
 
 export const subscriptionGuard = () => {
     return catchAsync(
@@ -13,10 +15,10 @@ export const subscriptionGuard = () => {
                 }
             });
             if (!subscription) {
-                throw new Error("Please subscribe to get access to premium contents")
+                throw new AppError(httpStatus.FORBIDDEN, "Please subscribe to get access to premium contents")
             }
             if (subscription?.status !== SubscriptionStatus.ACTIVE) {
-                throw new Error("Please subscribe again to get access to premium contents")
+                throw new AppError(httpStatus.FORBIDDEN, "Please subscribe again to get access to premium contents")
             }
             next()
         }

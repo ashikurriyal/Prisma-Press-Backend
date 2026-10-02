@@ -1,5 +1,5 @@
-import { PostStatus } from "../../../generated/prisma/enums";
-import { PostWhereInput } from "../../../generated/prisma/models";
+import { PostStatus } from "../../../generated/prisma/enums.js";
+import { PostWhereInput } from "../../../generated/prisma/models.js";
 
 export interface ICreatePostPayload {
     title: string;

@@ -1,7 +1,14 @@
-import { CommentStatus, PostStatus } from "../../../generated/prisma/enums"
-import { PostWhereInput } from "../../../generated/prisma/models"
-import { prisma } from "../../lib/prisma"
-import { ICreatePostPayload, IPostQuery, IUpdatePostPayload } from "./post.interface"
+import httpStatus from "http-status";
+import { AppError } from "../../utils/AppError.js";
+import { CommentStatus, PostStatus } from "../../../generated/prisma/enums.js"
+import { PostWhereInput } from "../../../generated/prisma/models.js"
+import { prisma } from "../../lib/prisma.js"
+import { pick } from "../../utils/pick.js"
+import { ICreatePostPayload, IPostQuery, IUpdatePostPayload } from "./post.interface.js"
+
+//only these fields can be set by the client, everything else (authorId, views, nested relations) is ignored
+const CREATE_POST_FIELDS = ["title", "content", "thumbnail", "isFeatured", "isPremium", "status", "tags"] as const;
+export const UPDATE_POST_FIELDS = ["title", "content", "thumbnail", "isFeatured", "status", "tags"] as const;
 
 const createPost = async (payload: ICreatePostPayload, userId: string) => {
     const user = await prisma.user.findFirstOrThrow({
@@ -14,12 +21,12 @@ const createPost = async (payload: ICreatePostPayload, userId: string) => {
     })
 
     if (payload.isPremium && user.subscription?.status !== "ACTIVE") {
-        throw new Error("You are not a premium user. so you can not create premium content");
+        throw new AppError(httpStatus.FORBIDDEN, "You are not a premium user. so you can not create premium content");
     }
 
     const result = await prisma.post.create({
         data: {
-            ...payload,
+            ...(pick(payload as any, CREATE_POST_FIELDS) as ICreatePostPayload),
             authorId: userId
         }
     })
@@ -89,14 +96,10 @@ const getAllPosts = async (query: IPostQuery) => {
         })
     }
 
-    if (query.status) {
-        andConditions.push({
-            status: query.status
-        })
-    }
-
+    //public endpoint, so only published posts are listed (drafts/archived are visible in /my-posts)
     andConditions.push({
-        isPremium: false
+        isPremium: false,
+        status: PostStatus.PUBLISHED
     })
 
     const posts = await prisma.post.findMany({
@@ -248,7 +251,9 @@ const getAllPosts = async (query: IPostQuery) => {
             author: {
                 omit: { password: true },
             },
-            comments: true,
+            comments: {
+                where: { status: CommentStatus.APPROVED }
+            },
         },
     });
 
@@ -276,6 +281,8 @@ const getPostById = async (postId: string) => {
             await tx.post.update({
                 where: {
                     id: postId,
+                    isPremium: false,
+                    status: PostStatus.PUBLISHED
                 },
                 data: {
                     views: {
@@ -287,7 +294,8 @@ const getPostById = async (postId: string) => {
             const post = await tx.post.findUniqueOrThrow({
                 where: {
                     id: postId,
-                    isPremium: false
+                    isPremium: false,
+                    status: PostStatus.PUBLISHED
                 },
                 include: {
                     author: {
@@ -326,14 +334,14 @@ const updatePost = async (postId: string, payload: IUpdatePostPayload, authorId:
     })
 
     if (!isAdmin && post.authorId !== authorId) {
-        throw new Error("You are not the owner of this post!")
+        throw new AppError(httpStatus.FORBIDDEN, "You are not the owner of this post!")
     }
 
     const result = await prisma.post.update({
         where: {
             id: postId
         },
-        data: payload,
+        data: pick(payload as any, UPDATE_POST_FIELDS) as IUpdatePostPayload,
         include: {
             author: {
                 omit: {
@@ -355,7 +363,7 @@ const deletePost = async (postId: string, authorId: string, isAdmin: boolean) =>
         }
     })
     if (!isAdmin && post.authorId !== authorId) {
-        throw new Error("You are not the owner of this post!")
+        throw new AppError(httpStatus.FORBIDDEN, "You are not the owner of this post!")
     }
 
     await prisma.post.delete({

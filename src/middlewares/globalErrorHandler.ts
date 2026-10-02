@@ -1,49 +1,54 @@
 import { NextFunction, Request, Response } from "express"
 import httpStatus from "http-status";
-import { Prisma } from "../../generated/prisma/client";
+import { Prisma } from "../../generated/prisma/client.js";
+import { AppError } from "../utils/AppError.js";
+import config from "../config/index.js";
 
 export const globalErrorHandler = (err: any, req: Request, res: Response, next: NextFunction) => {
 
-    let statusCode;
+    let statusCode: number = httpStatus.INTERNAL_SERVER_ERROR;
     let errorMessage = err.message || "Internal Server Error";
     let errorName = err.name || "Internal Server Error";
 
-    if (err instanceof Prisma.PrismaClientValidationError) {
+    if (err instanceof AppError) {
+        statusCode = err.statusCode;
+
+    } else if (err instanceof Prisma.PrismaClientValidationError) {
         statusCode = httpStatus.BAD_REQUEST;
         errorMessage = "You have provided incorrect field type or missing fields";
 
     } else if (err instanceof Prisma.PrismaClientKnownRequestError) {
         if (err.code === "P2002") {
-            statusCode = httpStatus.BAD_REQUEST,
-                errorMessage = "Duplicate Key Error"
+            statusCode = httpStatus.CONFLICT;
+            errorMessage = "Duplicate Key Error";
         } else if (err.code === "P2003") {
-            statusCode = httpStatus.BAD_REQUEST,
-                errorMessage = "Foreign Key Constraits failed"
+            statusCode = httpStatus.BAD_REQUEST;
+            errorMessage = "Foreign Key Constraint failed";
         } else if (err.code === "P2025") {
-            statusCode = httpStatus.BAD_REQUEST
-            errorMessage = "An operation failed because it depends on one or more records that were required but not found"
+            statusCode = httpStatus.NOT_FOUND;
+            errorMessage = "The requested record was not found";
+        } else {
+            errorMessage = "Error occurred during query execution";
         }
     } else if (err instanceof Prisma.PrismaClientInitializationError) {
-        // statusCode = httpStatus.BAD_REQUEST,
-        // errorMessage = "Authentication Failed"
         if (err.errorCode === "P1000") {
-            statusCode = httpStatus.UNAUTHORIZED,
-                errorMessage = "Authentication failed against database server. please check your credentials"
+            errorMessage = "Authentication failed against database server. please check your credentials";
         } else if (err.errorCode === "P1001") {
-            statusCode = httpStatus.BAD_REQUEST,
-                errorMessage = "Cant reach database server"
+            errorMessage = "Cant reach database server";
         }
-    } else if (err instanceof Prisma.PrismaClientKnownRequestError) {
-        statusCode = httpStatus.INTERNAL_SERVER_ERROR;
-        errorMessage = "Error Occurd during query execution"
     }
 
+    // log only unexpected errors, 4xx errors are normal client mistakes
+    if (statusCode >= 500) {
+        console.error(err);
+    }
 
-    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+    res.status(statusCode).json({
         success: false,
-        statusCode: statusCode || httpStatus.INTERNAL_SERVER_ERROR,
+        statusCode,
         name: errorName,
         message: errorMessage,
-        error: err.stack
+        // never send the stack trace to clients in production
+        error: config.node_env === "production" ? undefined : err.stack
     })
 }

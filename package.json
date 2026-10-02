@@ -5,11 +5,11 @@
   "license": "ISC",
   "author": "",
   "type": "module",
-  "main": "server.ts",
+  "main": "dist/src/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "tsc",
-    "start": "node dist/server.js",
+    "build": "prisma generate --config prisma7.config.ts && tsc",
+    "start": "node dist/src/server.js",
     "stripe:webhook" : "stripe listen --all-snapshot --forward-to localhost:5001/api/subscription/webhook",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
