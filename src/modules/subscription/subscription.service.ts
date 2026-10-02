@@ -74,10 +74,10 @@ const handleWebhook = async (payload: Buffer, signature: string) => {
             await handleChangeSubscription(event.data.object);
             break;
 
-            /*
-            to test this run this command in cli 
-            stripe subscriptions cancel sub_id(paste existing subscribed sub_id)
-            */
+        /*
+        to test this run this command in cli 
+        stripe subscriptions cancel sub_id(paste existing subscribed sub_id)
+        */
 
         case 'customer.subscription.deleted':
             //occurs whenever a customer's subscription ends;
@@ -92,8 +92,25 @@ const handleWebhook = async (payload: Buffer, signature: string) => {
 }
 
 
+const getSubscriptionStatus = async (userId: string) => {
+    const isSubscriptionExist = await prisma.subscription.findUniqueOrThrow({
+        where: {
+            userId
+        }
+    })
+
+    const isActive = isSubscriptionExist.status === "ACTIVE" &&
+        isSubscriptionExist.currentPeriodEnd && new Date(isSubscriptionExist.currentPeriodEnd) > new Date();
+
+        return {
+            status: isSubscriptionExist.status,
+            isSubscribed: isActive,
+            currentPeriodEnd: isSubscriptionExist.currentPeriodEnd
+        }
+}
 
 export const subscriptionServices = {
     createCheckoutSession,
-    handleWebhook
+    handleWebhook,
+    getSubscriptionStatus
 }
