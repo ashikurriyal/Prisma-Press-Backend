@@ -10,6 +10,9 @@ router.post(
     auth(Role.USER, Role.AUTHOR, Role.ADMIN),
     subscriptionController.createCheckoutSession)
 
+
+//cancel subscription
+
 router.post("/webhook", subscriptionController.handleWebhook);
 router.get("/status",
     auth(Role.USER, Role.AUTHOR, Role.ADMIN),
