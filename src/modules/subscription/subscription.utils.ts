@@ -41,6 +41,7 @@ export const handleCheckoutCompleted = async (session: Stripe.Checkout.Session) 
             stripeCustomerId,
             stripeSubscriptionId,
             status: "ACTIVE",
+            cancelAtPeriodEnd: false,
             currentPeriodEnd
 
         }
@@ -53,6 +54,10 @@ export const handleChangeSubscription = async (payload: Stripe.Subscription) => 
         payload.status === "canceled" ? SubscriptionStatus.CANCELED :
             SubscriptionStatus.EXPIRED;
 
+
+    //cancel scheduled but still active till period end (cancel_at is set when cancelled from stripe dashboard/portal)
+    const cancelAtPeriodEnd = status === SubscriptionStatus.ACTIVE &&
+        (payload.cancel_at_period_end || payload.cancel_at !== null);
 
     const currentPeriodEnd = getPeriodEnd(payload);
     const isSubscriptionExist = await prisma.subscription.findUnique({
@@ -72,6 +77,7 @@ export const handleChangeSubscription = async (payload: Stripe.Subscription) => 
         },
         data: {
             status,
+            cancelAtPeriodEnd,
             currentPeriodEnd
         }
     })

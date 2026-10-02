@@ -1,7 +1,8 @@
 import config from "../../config"
 import { prisma } from "../../lib/prisma"
 import { stripe } from "../../lib/stripe"
-import { handleChangeSubscription, handleCheckoutCompleted } from "./subscription.utils"
+import { getPeriodEnd, handleChangeSubscription, handleCheckoutCompleted } from "./subscription.utils"
+import { SubscriptionStatus } from "../../../generated/prisma/enums"
 
 const createCheckoutSession = async (userId: string) => {
     const transactionResult = await prisma.$transaction(async (tx) => {
@@ -105,12 +106,56 @@ const getSubscriptionStatus = async (userId: string) => {
         return {
             status: isSubscriptionExist.status,
             isSubscribed: isActive,
+            cancelAtPeriodEnd: isSubscriptionExist.cancelAtPeriodEnd,
             currentPeriodEnd: isSubscriptionExist.currentPeriodEnd
         }
+}
+
+const cancelSubscription = async (userId: string) => {
+    const subscription = await prisma.subscription.findUnique({
+        where: {
+            userId
+        }
+    })
+
+    if (!subscription) {
+        throw new Error("You don't have any subscription to cancel")
+    }
+    if (subscription.status !== SubscriptionStatus.ACTIVE) {
+        throw new Error("Your subscription is not active")
+    }
+    if (subscription.cancelAtPeriodEnd) {
+        throw new Error("Your subscription is already scheduled to cancel")
+    }
+
+    //cancel at the end of billing period, so user keeps access for the time already paid
+    //stripe will fire customer.subscription.updated now and customer.subscription.deleted at period end
+    const stripeSubscription = await stripe.subscriptions.update(
+        subscription.stripeSubscriptionId,
+        { cancel_at_period_end: true }
+    )
+
+    //update db right away, webhook will sync the same values again
+    const result = await prisma.subscription.update({
+        where: {
+            userId
+        },
+        data: {
+            cancelAtPeriodEnd: true,
+            currentPeriodEnd: getPeriodEnd(stripeSubscription)
+        }
+    })
+
+    return {
+        status: result.status,
+        cancelAtPeriodEnd: result.cancelAtPeriodEnd,
+        currentPeriodEnd: result.currentPeriodEnd
+    }
 }
 
 export const subscriptionServices = {
     createCheckoutSession,
     handleWebhook,
-    getSubscriptionStatus
+    getSubscriptionStatus,
+    cancelSubscription
 }

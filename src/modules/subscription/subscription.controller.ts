@@ -49,9 +49,22 @@ const getSubscriptionStatus = catchAsync(
     })
 
 
+const cancelSubscription = catchAsync(
+    async (req: Request, res: Response, next: NextFunction) => {
+        const userId = req.user?.id
+        const result = await subscriptionServices.cancelSubscription(userId as string);
+
+        sendResponse(res, {
+            success: true,
+            statusCode: httpStatus.OK,
+            message: "Subscription cancelled successfully! You will have access till the current period end",
+            data: result
+        })
+    })
 
 export const subscriptionController = {
     createCheckoutSession,
     handleWebhook,
-    getSubscriptionStatus
+    getSubscriptionStatus,
+    cancelSubscription
 }

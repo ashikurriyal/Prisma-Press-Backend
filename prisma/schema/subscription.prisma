@@ -6,6 +6,8 @@ model Subscription{
 
     currentPeriodEnd DateTime
     status SubscriptionStatus @default(ACTIVE)
+    //true when user cancelled, access remains till currentPeriodEnd
+    cancelAtPeriodEnd Boolean @default(false)
 
     //stripe related ids => 
     //stripe customerId
